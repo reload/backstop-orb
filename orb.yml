@@ -1,12 +1,17 @@
 version: 2.1
-description: Publish Backstop report URL as GitHub Status
+description: Publish BackstopJS report URL as GitHub Status
 
 aliases:
-  command: &command |-
+  command: &github_status |-
     if [ -z "${GITHUB_TOKEN}" ]; then echo "Need GitHub API token (\$GITHUB_TOKEN)."; exit 1; fi
     if [ -z "${CIRCLE_TOKEN}" ]; then echo "Need CircleCI API token (\$CIRCLE_TOKEN)."; exit 1; fi
-    url=$(curl --fail --silent "https://circleci.com/api/v1.1/project/gh/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}/artifacts?circle-token=${CIRCLE_TOKEN}" | jq -r '.[] | select(.path | contains("html_report/index.html")).url')
-    curl --fail --silent -X POST --user ":${GITHUB_TOKEN}" "https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/statuses/${CIRCLE_SHA1}" --data "{\"state\": \"${state}\", \"description\": \"BackstopJS Report\", \"context\": \"BackstopJS Report\", \"target_url\": \"${url}\"}"
+
+    circle_api_url="https://circleci.com/api/v1.1/project/gh/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}/artifacts?circle-token=${CIRCLE_TOKEN}"
+    artifact_url=$(curl --fail --silent "${circle_api_url}" | jq -r '.[] | select(.path | contains("html_report/index.html")).url')
+
+    github_api_url="https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/statuses/${CIRCLE_SHA1}"
+    status_data="{\"state\": \"${state}\", \"description\": \"Report\", \"context\": \"BackstopJS\", \"target_url\": \"${artifact_url}\"}"
+    curl --fail --silent -X POST --user ":${GITHUB_TOKEN}" "${github_api_url}" --data "${status_data}"
 
 commands:
   github:
@@ -15,11 +20,11 @@ commands:
           name: Report Backstop success status and report link to GitHub
           environment:
             state: success
-          command: *command
+          command: *github_status
           when: on_success
       - run:
           name: Report Backstop error status and report link to GitHub
           environment:
             state: error
-          command: *command
+          command: *github_status
           when: on_fail

@@ -1,6 +1,6 @@
 .PHONY: validate publish
 
-VERSION=1.0.0
+VERSION=1.0.1
 
 validate: orb.yml
 	circleci orb validate orb.yml
