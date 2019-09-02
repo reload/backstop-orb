@@ -1,7 +1,7 @@
 .PHONY: backstop-validate backstop-publish dais-validate dais-publish
 
-BACKSTOP_VERSION=dev:16
-DAIS_VERSION=dev:20
+BACKSTOP_VERSION=2.0.0
+DAIS_VERSION=1.0.0
 
 backstop-validate: backstop-orb.yml
 	circleci orb validate $<
