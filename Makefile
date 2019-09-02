@@ -1,9 +1,16 @@
-.PHONY: validate publish
+.PHONY: backstop-validate backstop-publish dais-validate dais-publish
 
-VERSION=1.0.5
+BACKSTOP_VERSION=dev:16
+DAIS_VERSION=dev:20
 
-validate: orb.yml
-	circleci orb validate orb.yml
+backstop-validate: backstop-orb.yml
+	circleci orb validate $<
 
-publish: validate
-	circleci orb publish orb.yml reload/backstop@$(VERSION)
+backstop-publish: backstop-validate
+	circleci orb publish backstop-orb.yml reload/backstop@$(BACKSTOP_VERSION)
+
+dais-validate: dais-orb.yml
+	circleci orb validate $<
+
+dais-publish: dais-validate
+	circleci orb publish dais-orb.yml reload/dais@$(DAIS_VERSION)

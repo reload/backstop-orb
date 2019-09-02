@@ -1,0 +1,22 @@
+version: 2.1
+description: Run Dais
+
+commands:
+  wait:
+    parameters:
+      platformsh_key:
+        type: env_var_name
+        default: DAIS_PLATFORMSH_KEY
+      platformsh_id:
+        type: env_var_name
+        default: DAIS_PLATFORMSH_ID
+      files:
+        type: string
+    steps:
+      - run:
+          name: Wait for PR environment to be ready
+          command: |-
+            DAIS=/tmp/dais
+            which php > /dev/null || (echo "Need php(1) to be installed."; exit 1)
+            curl --fail --silent --location --output "${DAIS}" https://github.com/xendk/dais/releases/download/0.8.0/dais-0.8.0.phar
+            php "${DAIS}" << parameters.files >>
