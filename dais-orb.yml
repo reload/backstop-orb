@@ -16,7 +16,8 @@ commands:
       - run:
           name: Wait for PR environment to be ready
           command: |-
-            DAIS=/tmp/dais
+            DAIS_VERSION=0.8.1
+            DAIS_BIN=/tmp/dais
             which php > /dev/null || (echo "Need php(1) to be installed."; exit 1)
-            curl --fail --silent --location --output "${DAIS}" https://github.com/xendk/dais/releases/download/0.8.0/dais-0.8.0.phar
-            php "${DAIS}" << parameters.files >>
+            curl --fail --silent --location --output "${DAIS_BIN}" https://github.com/xendk/dais/releases/download/${DAIS_VERSION}/dais-${DAIS_VERSION}.phar
+            php "${DAIS_BIN}" << parameters.files >>
