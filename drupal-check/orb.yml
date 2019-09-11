@@ -1,0 +1,80 @@
+version: 2.1
+description: Run drupal-check
+
+commands:
+  setup-drupal-check:
+    steps:
+      - run:
+          name: Setup drupal-check
+          command: |-
+            DRUPAL_CHECK=/tmp/drupal-check
+            if [ ! -x /tmp/drupal-check ]; then
+              curl --fail --silent --output /tmp/drupal-check -O -L https://github.com/mglaman/drupal-check/releases/latest/download/drupal-check.phar
+              chmod +x /tmp/drupal-check
+            fi
+
+            mkdir -p /tmp/results/analysis/analysis /tmp/results/deprecations/deprecations
+
+            sudo -E apt update
+            sudo -E apt install --yes libpng-dev
+            sudo -E docker-php-ext-install gd
+
+  analysis:
+    parameters:
+      paths:
+        type: string
+    steps:
+      - run:
+          name: "Analysis check"
+          environment:
+            COMMAND: analysis
+          command: |-
+            /tmp/drupal-check --analysis --format=junit --no-progress --no-interaction -- << parameters.paths >> > /tmp/results/analysis/analysis/drupal-check.xml
+          when: always
+      - store_test_results:
+          path: /tmp/results/analysis
+          destination: "Drupal Check/analysis"
+
+  deprecations:
+    parameters:
+      paths:
+        type: string
+    steps:
+      - run:
+          name: "Deprecation check"
+          environment:
+            COMMAND: deprecations
+          command: |-
+            /tmp/drupal-check --deprecations --format=junit --no-progress --no-interaction -- << parameters.paths >> > /tmp/results/deprecations/deprecations/drupal-check.xml
+          when: always
+      - store_test_results:
+          path: /tmp/results/deprecations
+          destination: "Drupal Check/deprecations"
+
+executors:
+  php-cli:
+    docker:
+      - image: circleci/php:7.2-cli
+
+jobs:
+  drupal-check:
+    executor: php-cli
+    parameters:
+      setup:
+        description: Steps to perform before running drupal-check
+        type: steps
+        default:
+          - run:
+              name: Composer install dependencies
+              command: composer install -n --prefer-dist
+      paths:
+        type: string
+        default: web/modules/custom/ web/themes/custom/
+    steps:
+      - checkout
+      - setup-drupal-check
+      - << parameters.setup >>
+      - analysis:
+          paths: << parameters.paths >>
+      - deprecations:
+          paths: << parameters.paths >>
