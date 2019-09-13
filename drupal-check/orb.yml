@@ -3,9 +3,13 @@ description: Run drupal-check
 
 commands:
   setup-drupal-check:
+    parameters:
+      directory:
+        type: string
     steps:
       - run:
           name: Setup drupal-check
+          working_directory: << parameters.directory >>
           command: |-
             DRUPAL_CHECK=/tmp/drupal-check
             if [ ! -x /tmp/drupal-check ]; then
@@ -19,8 +23,19 @@ commands:
             sudo -E apt install --yes libpng-dev
             sudo -E docker-php-ext-install gd
 
+            # If a composer.drupal-check.json exists merge it into composer.json
+            if [[ -r composer.json && -r composer.drupal-check.json ]]; then
+              mv composer.json composer.orig.json
+              jq -s '.[0] * .[1]' composer.orig.json composer.drupal-check.json > composer.json
+            fi
+
+            if [[ -r composer.json ]]; then
+              composer install -n --prefer-dist
+            fi
   analysis:
     parameters:
+      directory:
+        type: string
       paths:
         type: string
     steps:
@@ -28,6 +43,7 @@ commands:
           name: "Analysis check"
           environment:
             COMMAND: analysis
+          working_directory: << parameters.directory >>
           command: |-
             /tmp/drupal-check --analysis --format=junit --no-progress --no-interaction -- << parameters.paths >> > /tmp/results/analysis/analysis/drupal-check.xml
           when: always
@@ -37,6 +53,8 @@ commands:
 
   deprecations:
     parameters:
+      directory:
+        type: string
       paths:
         type: string
     steps:
@@ -44,6 +62,7 @@ commands:
           name: "Deprecation check"
           environment:
             COMMAND: deprecations
+          working_directory: << parameters.directory >>
           command: |-
             /tmp/drupal-check --deprecations --format=junit --no-progress --no-interaction -- << parameters.paths >> > /tmp/results/deprecations/deprecations/drupal-check.xml
           when: always
@@ -54,27 +73,30 @@ commands:
 executors:
   php-cli:
     docker:
-      - image: circleci/php:7.2-cli
+      - image: circleci/php:7.2-cli-node
 
 jobs:
   drupal-check:
     executor: php-cli
     parameters:
+      directory:
+        type: string
+        default: .
       setup:
         description: Steps to perform before running drupal-check
         type: steps
-        default:
-          - run:
-              name: Composer install dependencies
-              command: composer install -n --prefer-dist
+        default: []
       paths:
         type: string
         default: web/modules/custom/ web/themes/custom/
     steps:
       - checkout
-      - setup-drupal-check
+      - setup-drupal-check:
+          directory: << parameters.directory >>
       - << parameters.setup >>
       - analysis:
           paths: << parameters.paths >>
+          directory: << parameters.directory >>
       - deprecations:
           paths: << parameters.paths >>
+          directory: << parameters.directory >>
