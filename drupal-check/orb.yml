@@ -32,6 +32,8 @@ commands:
             if [[ -r composer.json ]]; then
               composer install -n --prefer-dist
             fi
+
+            cd /tmp && wget -O - -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s -- -b $PWD/ v0.9.13
   analysis:
     parameters:
       directory:
@@ -45,6 +47,7 @@ commands:
             COMMAND: analysis
           working_directory: << parameters.directory >>
           command: |-
+            ([ ! -z "${REVIEWDOG_TOKEN}" ] && /tmp/drupal-check --analysis --format=checkstyle --no-progress --no-interaction -- << parameters.paths >> | /tmp/reviewdog -f=checkstyle -name="Drupal Check: Analysis" -reporter=github-pr-check) || true
             /tmp/drupal-check --analysis --format=junit --no-progress --no-interaction -- << parameters.paths >> > /tmp/results/analysis/analysis/drupal-check.xml
           when: always
       - store_test_results:
@@ -64,6 +67,7 @@ commands:
             COMMAND: deprecations
           working_directory: << parameters.directory >>
           command: |-
+            ([ ! -z "${REVIEWDOG_TOKEN}" ] && /tmp/drupal-check --deprecations --format=checkstyle --no-progress --no-interaction -- << parameters.paths >> | /tmp/reviewdog -f=checkstyle -name="Drupal Check: Deprecations" -reporter=github-pr-check) || true
             /tmp/drupal-check --deprecations --format=junit --no-progress --no-interaction -- << parameters.paths >> > /tmp/results/deprecations/deprecations/drupal-check.xml
           when: always
       - store_test_results:
