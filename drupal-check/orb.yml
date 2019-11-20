@@ -56,7 +56,7 @@ commands:
             COMMAND: analysis
           working_directory: << parameters.directory >>
           command: |-
-            if [[ ! -z "${REVIEWDOG_TOKEN}" ]]; then
+            if [[ ! -z "${REVIEWDOG_TOKEN}" && ! -z "${CIRCLE_PULL_REQUEST}" ]]; then
               /tmp/drupal-check --analysis --format=checkstyle --no-progress --no-interaction -- << parameters.paths >> | /tmp/reviewdog -f=checkstyle -name="Drupal Check: Analysis" -reporter=github-pr-check
             fi
           when: always
@@ -85,7 +85,7 @@ commands:
             COMMAND: deprecations
           working_directory: << parameters.directory >>
           command: |-
-            if [[ ! -z "${REVIEWDOG_TOKEN}" ]]; then
+            if [[ ! -z "${REVIEWDOG_TOKEN}" && ! -z "${CIRCLE_PULL_REQUEST}" ]]; then
               /tmp/drupal-check --deprecations --format=checkstyle --no-progress --no-interaction -- << parameters.paths >> | /tmp/reviewdog -f=checkstyle -name="Drupal Check: Deprecations" -reporter=github-pr-check
             fi
           when: always
