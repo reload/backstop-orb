@@ -2,23 +2,34 @@ version: 2.1
 description: Run drupal-check
 
 commands:
+  setup-reviewdog:
+    steps:
+      - run:
+          name: Setup reviewdog
+          command: |
+            if [ ! -x /tmp/reviewdog ]; then
+              cd /tmp && wget -O - -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s -- -b $PWD/ v0.9.13
+            fi
   setup-drupal-check:
-    parameters:
-      directory:
-        type: string
     steps:
       - run:
           name: Setup drupal-check
-          working_directory: << parameters.directory >>
-          command: |-
-            DRUPAL_CHECK=/tmp/drupal-check
+          command: |
             if [ ! -x /tmp/drupal-check ]; then
               curl --fail --silent --output /tmp/drupal-check -O -L https://github.com/mglaman/drupal-check/releases/latest/download/drupal-check.phar
               chmod +x /tmp/drupal-check
             fi
 
             mkdir -p /tmp/results/analysis/analysis /tmp/results/deprecations/deprecations
-
+  composer-install:
+    parameters:
+      directory:
+        type: string
+    steps:
+      - run:
+          name: Run composer install
+          working_directory: << parameters.directory >>
+          command: |
             sudo -E apt update
             sudo -E apt install --yes libpng-dev
             sudo -E docker-php-ext-install gd
@@ -32,8 +43,6 @@ commands:
             if [[ -r composer.json ]]; then
               composer install -n --prefer-dist
             fi
-
-            cd /tmp && wget -O - -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s -- -b $PWD/ v0.9.13
   analysis:
     parameters:
       directory:
@@ -42,12 +51,21 @@ commands:
         type: string
     steps:
       - run:
+          name: "Analysis check (Reviewdog)"
+          environment:
+            COMMAND: analysis
+          working_directory: << parameters.directory >>
+          command: |-
+            if [[ ! -z "${REVIEWDOG_TOKEN}" ]]; then
+              /tmp/drupal-check --analysis --format=checkstyle --no-progress --no-interaction -- << parameters.paths >> | /tmp/reviewdog -f=checkstyle -name="Drupal Check: Analysis" -reporter=github-pr-check
+            fi
+          when: always
+      - run:
           name: "Analysis check"
           environment:
             COMMAND: analysis
           working_directory: << parameters.directory >>
           command: |-
-            ([ ! -z "${REVIEWDOG_TOKEN}" ] && /tmp/drupal-check --analysis --format=checkstyle --no-progress --no-interaction -- << parameters.paths >> | /tmp/reviewdog -f=checkstyle -name="Drupal Check: Analysis" -reporter=github-pr-check) || true
             /tmp/drupal-check --analysis --format=junit --no-progress --no-interaction -- << parameters.paths >> > /tmp/results/analysis/analysis/drupal-check.xml
           when: always
       - store_test_results:
@@ -62,12 +80,21 @@ commands:
         type: string
     steps:
       - run:
+          name: "Deprecation check (Reviewdog)"
+          environment:
+            COMMAND: deprecations
+          working_directory: << parameters.directory >>
+          command: |-
+            if [[ ! -z "${REVIEWDOG_TOKEN}" ]]; then
+              /tmp/drupal-check --deprecations --format=checkstyle --no-progress --no-interaction -- << parameters.paths >> | /tmp/reviewdog -f=checkstyle -name="Drupal Check: Deprecations" -reporter=github-pr-check
+            fi
+          when: always
+      - run:
           name: "Deprecation check"
           environment:
             COMMAND: deprecations
           working_directory: << parameters.directory >>
           command: |-
-            ([ ! -z "${REVIEWDOG_TOKEN}" ] && /tmp/drupal-check --deprecations --format=checkstyle --no-progress --no-interaction -- << parameters.paths >> | /tmp/reviewdog -f=checkstyle -name="Drupal Check: Deprecations" -reporter=github-pr-check) || true
             /tmp/drupal-check --deprecations --format=junit --no-progress --no-interaction -- << parameters.paths >> > /tmp/results/deprecations/deprecations/drupal-check.xml
           when: always
       - store_test_results:
@@ -95,8 +122,10 @@ jobs:
         default: web/modules/custom/ web/themes/custom/
     steps:
       - checkout
-      - setup-drupal-check:
+      - composer-install:
           directory: << parameters.directory >>
+      - setup-drupal-check
+      - setup-reviewdog
       - << parameters.setup >>
       - analysis:
           paths: << parameters.paths >>
