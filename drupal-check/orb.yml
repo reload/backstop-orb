@@ -16,7 +16,7 @@ commands:
           name: Setup drupal-check
           command: |
             if [ ! -x /tmp/drupal-check ]; then
-              curl --fail --silent --output /tmp/drupal-check -O -L https://github.com/mglaman/drupal-check/releases/latest/download/drupal-check.phar
+              curl --fail --silent --output /tmp/drupal-check -O -L https://github.com/mglaman/drupal-check/releases/download/1.0.14/drupal-check.phar
               chmod +x /tmp/drupal-check
             fi
 
