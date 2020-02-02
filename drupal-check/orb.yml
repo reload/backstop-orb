@@ -8,7 +8,7 @@ commands:
           name: Setup reviewdog
           command: |
             if [ ! -x /tmp/reviewdog ]; then
-              cd /tmp && wget -O - -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s -- -b $PWD/ v0.9.13
+              cd /tmp && wget -O - -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s -- -b $PWD/ v0.9.17
             fi
   setup-drupal-check:
     steps:
